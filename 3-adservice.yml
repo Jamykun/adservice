@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: frontend
+  name: adservice-dep
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: adservice
+  template:
+    metadata:
+      labels:
+        app: adservice
+    spec:
+      containers:
+      - name: adservice-con
+        image: openjdk:8-slim
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9555
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #         - matchExpressions:
+      #             - key: name
+      #               operator: In
+      #               values: 
+      #               - app-node        
+      #   podAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #     - labelSelector:
+      #         matchExpressions:
+      #         - key: zone # cette clé récupère la zone géographique de GCP donc il ne devrait jamais trouver la valeur frontend
+      #           operator: In
+      #           values:
+      #           - frontend
+      #       topologyKey: topology.kubernetes.io/zone
+              # - key: node-role.kubernetes.io/master #-> deprécié -> trouver le label à utiliser
+              #   operator: NotIn
+              #   values:
+              #   - master
+          # - labelSelector:
+          #     matchExpressions:
+          #     - key: exposition
+          #       operator: In
+          #       values:
+          #       - frontend
+          #   topologyKey: topology.kubernetes.io/zone
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: frontend
+  name: adservice-svc
+spec:
+  selector:
+    app: adservice
+  type: ClusterIP
+  ports:
+  - port: 9555
+    targetPort: 9555
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  namespace: frontend
+  name: adservice-dep
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: adservice-dep
+  minReplicas : 1
+  maxReplicas : 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
