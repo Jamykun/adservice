@@ -24,6 +24,11 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 9555
+        resources:
+          limits:
+            cpu: 200m
+          requests:
+            cpu: 100m
       # affinity:
       #   nodeAffinity:
       #     requiredDuringSchedulingIgnoredDuringExecution:
